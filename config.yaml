@@ -1,0 +1,85 @@
+# ============================================================
+# Configuration for the suite2p HPC pipeline
+#
+# Edit the values below to match your setup. All three scripts
+# (jobscript_s2p_pj.sh, dataexchange.py, suite2p_pipeline.py)
+# read their parameters from this single file.
+# ============================================================
+
+# --- Filesystem paths ---------------------------------------
+
+# Cluster directory that holds one folder per uploaded recording.
+# Each folder is named after the raw file (animalID_date_time_xxx) and holds
+# the raw file plus its suite2p output.
+# Used by jobscript_s2p_pj.sh (find) and dataexchange.py (cluster_path).
+cluster_data_path: /lustre/scratch/data/jtim_hpc-2PAnalysis
+
+# Conda environment to activate on the cluster.
+# Used by jobscript_s2p_pj.sh.
+conda_env_path: /home/jtim_hpc/.conda/envs/suite2p
+
+# Local folder that contains ALL raw imaging files in one place.
+# Files are named animalID_date_time_xxx.nd2 (xxx = any extra info, e.g.
+# sessionnumber_sessionID). Used by dataexchange.py (data_path).
+local_data_path: R:/JosephineTimm
+
+# Local folder where processed results are stored. One subfolder per analyzed
+# file, named animalID_xxx, containing the suite2p output (no raw file).
+# Used by dataexchange.py (results_path).
+results_path: //ieekf-fs1/home/timmjo/Animals/
+
+# Plain-text log of experiments that have already been uploaded/analyzed
+# (one raw file name per line). Used by the "only not-yet-analyzed" upload
+# option and appended to automatically as new files are uploaded.
+# Used by dataexchange.py (analyzed_log_path).
+analyzed_log_path: R:/JosephineTimm/analyzed_experiments.txt
+
+# SSH login string for the cluster (user@host).
+# Used by dataexchange.py (login_string).
+login_string: jtim_hpc@marvin.hpc.uni-bonn.de
+
+# --- Suite2p parameters -------------------------------------
+# These override the defaults returned by suite2p.default_ops().
+# Any key not listed here keeps its suite2p default value.
+suite2p:
+  # recording related settings
+  tau: 1.3
+  fs: 15.2
+  nchannels: 2
+  functional_chan: 1
+  nplanes: 1
+  input_format: nd2
+
+  # registration settings
+  do_bidiphase: true
+  nimg_init: 800
+  batch_size: 500
+  smooth_sigma: 2
+  smooth_sigma_time: 1
+  two_step_registration: true
+
+  # nonrigid registration settings
+  snr_thresh: 1.3
+  maxregshiftNR: 8
+
+  # cell detection settings
+  connected: true
+  denoise: true
+  may_iterations: 25
+  max_overlap: 0.1
+  threshold_scaling: 1.2
+  nbinned: 3000
+  high_pass: 50
+
+  # cellpose settings
+  diameter: 12
+
+  # signal extraction
+  allow_overlap: true
+
+  # spike detection
+  spikedetect: false
+
+  # output settings
+  save_mat: false
+  delete_bin: true

@@ -1,54 +1,20 @@
 import suite2p
 import sys
+import os
+import yaml
+
+# load parameters from the shared config file (same directory as this script)
+config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.yaml")
+with open(config_path, "r") as f:
+    config = yaml.safe_load(f)
 
 # define paths
 # workspace directory
 datapath = sys.argv[1:][0]
 
-# load default settings
+# load default settings and apply the overrides from config.yaml
 ops = suite2p.default_ops()
-
-# recording related settings
-ops['tau'] = 1.3
-ops['fs'] = 15.2
-ops['nchannels'] = 2
-ops['functional_chan'] = 1
-ops['nplanes'] = 1
-ops['input_format'] = "nd2"
-
-# registration settings
-ops['do_bidiphase'] = True
-ops['nimg_init'] = 800
-ops['batch_size'] = 500
-ops['smooth_sigma'] = 2
-ops['smooth_sigma_time'] = 1
-ops['two_step_registration'] = True
-
-# nonrigid registration settings
-ops['snr_thresh'] = 1.3
-ops['maxregshiftNR'] = 8
-
-# cell detection settings
-ops['connected'] = True
-ops['denoise'] = True
-ops['may_iterations'] = 25
-ops['max_overlap'] = 0.1
-ops['threshold_scaling'] = 1.2
-ops['nbinned'] = 3000
-ops['high_pass'] = 50
-
-# cellpose settings
-ops['diameter'] = 12
-
-# signal extraction
-ops['allow_overlap'] = True
-
-# spike detection
-ops['spikedetect'] = False
-
-# output settings
-ops['save_mat'] = False
-ops['delete_bin'] = True
+ops.update(config["suite2p"])
 
 # path related parameters
 db = {
