@@ -1,6 +1,6 @@
 # Suite2P on HPC
 
-This repository contains information on how to set up an analysis pipeline with Suize2P on Marvin.
+This repository contains information on how to set up an analysis pipeline with Suite2P on Marvin.
 
 # Setup Instructions
 
@@ -51,6 +51,28 @@ Still on the cluster, outside the environment create a workspace to put the imag
 For this you can use the file dataexchange.py 
 
 ### STEP 6: Run Suite2P
+The SLURM job is set up to analyze all available files on the cluster in parallel. Therefore within the SLURM job the number #SBATCH --array has to be consistent with files on the cluster. For example if you have 8 imaging files on the cluster (all in their respective folder in the workspace), #SBATCH --array has to be set to 0-7.
+You can also adapt the job-name and account if needed.
+
+To start the job, within the home directory run:
+
+```sbatch jobscript_s2p_pj.sh```
+
+You should get the message that your SLURM job was submitted.
+Once the slurm job is running, for each slurm job a log file is generated: Log_jobid.out
+
+You can also check the status of the jobs (multiple jobs because they are running in parallel) on the cluster by running:
+
+```squeue --me```
 
 ### STEP 7: Copy the results to your local device.
 For this you can use the dataexchange.py
+
+### General Tip
+
+Your home directory might get a bit cluttered if you do not delete the .out files after the jobs are done. Each file that you analyze will generate one of these, so they add up quickly.
+To delete the files, run:
+
+```rm Log*```
+
+This command will remove all files that begin with the Log.
