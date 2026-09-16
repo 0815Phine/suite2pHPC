@@ -2,7 +2,7 @@
 
 This repository contains information on how to set up an analysis pipeline with Suite2P on Marvin.
 
-# Setup Instructions
+## Setup Instructions
 
 These instructions assume you have already:
 - gained access to Marvin
@@ -68,7 +68,7 @@ You can also check the status of the jobs (multiple jobs because they are runnin
 ### STEP 7: Copy the results to your local device.
 For this you can use the dataexchange.py
 
-### General Tip
+## General Tip
 
 Your home directory might get a bit cluttered if you do not delete the .out files after the jobs are done. Each file that you analyze will generate one of these, so they add up quickly.
 To delete the files, run:
