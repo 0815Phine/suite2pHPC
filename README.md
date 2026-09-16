@@ -12,7 +12,9 @@ These instructions assume you have already:
 Once logged into Marvin, perform the following three commands:
 
 ```module load Miniforge3``` (-> this is a free Anaconda clone)
+
 ```conda init``` (to initialize Anaconda)
+
 ```source ~/.bashrc``` (to tell the current bash terminal it should update to use Anaconda)
 
 You should now see the typical conda (base) appear on the left of the current terminal line.
@@ -30,7 +32,9 @@ Now, ssh back into Marvin, check if the files are in your home directory (```ls 
 To install Suite2P locally in your home directory you can now follow the instructions given by Suite2P ()
 
 ```conda create --name suite2p python=3.11```
+
 ```conda activate suite2p```
+
 ```python -m pip install suite2p```
 
 Additionally you have to install the nd2 package for reading .nd2 files in the environment.
