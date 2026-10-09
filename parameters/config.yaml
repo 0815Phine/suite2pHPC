@@ -38,48 +38,110 @@ analyzed_log_path: R:/JosephineTimm/analyzed_experiments.txt
 # Used by dataexchange.py (login_string).
 login_string: jtim_hpc@marvin.hpc.uni-bonn.de
 
-# --- Suite2p parameters -------------------------------------
-# These override the defaults returned by suite2p.default_ops().
-# Any key not listed here keeps its suite2p default value.
+# --- Suite2p parameters (suite2p 1.1.0 nested structure) ----
+# Every tunable parameter is listed with its default; change any value as needed.
+# db  = file input/output; settings = pipeline parameters (grouped by stage).
+# data_path and save_path0 are set automatically by the pipeline (per recording).
+# Algorithm-specific params (diameter, sourcery_settings, cellpose_settings) are
+# omitted because detection.algorithm is 'sparsery'; add them back only if you
+# switch algorithm (suite2p fills their defaults otherwise).
 suite2p:
-  # recording related settings
-  tau: 1.3
-  fs: 15.2
-  nchannels: 2
-  functional_chan: 1
-  nplanes: 1
-  input_format: nd2
 
-  # registration settings
-  do_bidiphase: true
-  nimg_init: 800
-  batch_size: 500
-  smooth_sigma: 2
-  smooth_sigma_time: 1
-  two_step_registration: true
+  db:
+    input_format: nd2            # ['tif','h5','nwb','bruker','movie','dcimg','nd2']
+    nchannels: 2                 # 1- or 2-channel recording
+    functional_chan: 1           # channel used for functional ROIs (1-based)
+    nplanes: 1                   # planes per file
+    keep_movie_raw: false        # keep non-registered binary (REQUIRED if two_step_registration)
+    look_one_level_down: false   # also search subfolders of each data_path
+    force_sktiff: false          # (tiff only) use tifffile instead of scanimage reader
+    batch_size: 500              # frames/batch when WRITING binaries (tiff/h5; nd2 ignores)
+    # fast_disk: null            # SSD dir for temporary binary (defaults to save_path0)
 
-  # nonrigid registration settings
-  snr_thresh: 1.3
-  maxregshiftNR: 8
+  settings:
+    # ---- general ----
+    tau: 1.3                     # indicator decay (s) for deconvolution + binning
+    fs: 15                       # sampling rate per plane (Hz)
+    torch_device: cuda           # 'cuda' (GPU) or 'cpu'
+    # diameter: [12, 12]         # ROI diameter (Y,X) px — ONLY used for sourcery/cellpose
 
-  # cell detection settings
-  connected: true
-  denoise: true
-  may_iterations: 25
-  max_overlap: 0.1
-  threshold_scaling: 1.2
-  nbinned: 3000
-  high_pass: 50
+    run:
+      do_registration: 1         # 0=off, 1=on, 2=force re-registration
+      do_regmetrics: true        # compute registration quality metrics (needs >=1500 frames)
+      do_detection: true         # ROI detection + extraction (old 'roidetect')
+      do_deconvolution: true     # spike deconvolution (old 'spikedetect')
+      multiplane_parallel: false # run each plane as a separate server job
 
-  # cellpose settings
-  diameter: 12
+    io:
+      delete_bin: false          # delete data.bin after processing
+      move_bin: false            # move binary from fast_disk to save_path when done
+      combined: true             # combine planes into a single result
+      save_mat: false            # also save Fall.mat (MATLAB)
+      save_NWB: false            # also save NWB file
+      save_ops_orig: true        # save db/settings/reg_outputs/detection_outputs into ops
 
-  # signal extraction
-  allow_overlap: true
+    registration:
+      nimg_init: 300             # subsampled frames used to build the reference image
+      batch_size: 200            # frames per registration batch (lower if GPU runs out of memory)
+      maxregshift: 0.1           # max rigid shift as fraction of frame max(width,height)
+      align_by_chan2: false      # align using the non-functional channel
+      nonrigid: true             # use nonrigid registration
+      block_size: [128, 128]     # nonrigid block size (keep multiples of 2/3)
+      maxregshiftNR: 5           # max nonrigid pixel shift relative to rigid
+      snr_thresh: 1.2            # nonrigid block SNR threshold below which blocks are smoothed
+      smooth_sigma: 1.8          # XY gaussian smoothing (~1 for 2P, 3-5 for 1P)
+      smooth_sigma_time: 0       # temporal gaussian smoothing for shift estimation
+                                 # NOTE: must stay 0 — values >0 crash this suite2p build
+                                 # (registration temporal_smooth returns numpy, breaks torch.argmax)
+      subpixel: 10               # subpixel precision (1/subpixel steps)
+      spatial_taper: 3.45        # edge taper width (px); larger for 1P
+      th_badframes: 1.0          # threshold to exclude bad frames when cropping (smaller = exclude more)
+      norm_frames: true          # normalize frames when detecting shifts
+      do_bidiphase: true         # compute bidirectional phase offset from the data
+      bidiphase: 0               # fixed bidi offset (used only if do_bidiphase is false)
+      two_step_registration: false  # register twice (low-SNR data); REQUIRES db.keep_movie_raw=true
+      upsample_meanImg: null     # super-resolution meanImg upsample factor (null/0 = off)
+      reg_tif: false             # save registered tiffs
+      reg_tif_chan2: false       # save chan2 registered tiffs
 
-  # spike detection
-  spikedetect: false
+    detection:
+      algorithm: sparsery        # ['sparsery','sourcery','cellpose']
+      threshold_scaling: 1       # higher -> fewer ROIs detected
+      max_overlap: 0.75          # discard ROIs overlapping more than this fraction with others
+      nbins: 5000                # max binned frames for detection (reduce if RAM-limited)
+      bin_size: null             # bin size in frames; null -> auto from tau/fs
+      highpass_time: 50          # temporal running-mean subtraction window (in bins)
+      denoise: true              # PCA-denoise the binned movie before detection
+      block_size: [64, 64]       # block size used by denoising
+      soma_crop: true            # crop dendrites when computing ROI stats
+      npix_norm_min: 0.0         # minimum normalized npix for an ROI
+      npix_norm_max: 100         # maximum normalized npix for an ROI
+      chan2_threshold: 0.25      # IoU threshold to mark an ROI as present in chan2 (2-channel only)
+      cellpose_chan2: false      # run cellpose on the anatomical channel and overlap with ROIs
+      sparsery_settings:
+        highpass_neuropil: 25    # px highpass on binned movie to subtract neuropil
+        max_ROIs: 5000           # maximum number of ROIs to detect
+        spatial_scale: 0         # 0=auto; 1=6px, 2=12px, 3=24px, 4=48px
+        active_percentile: 0.0   # percentile of active pixels used for thresholding
 
-  # output settings
-  save_mat: false
-  delete_bin: true
+    extraction:
+      neuropil_extract: true     # extract neuropil signal (Fneu); false -> Fneu=0
+      neuropil_coefficient: 0.7  # neuropil subtraction coefficient
+      inner_neuropil_radius: 2   # px gap between ROI and its neuropil donut
+      min_neuropil_pixels: 350   # minimum neuropil pixels per ROI
+      lam_percentile: 50.0       # ROI-weight percentile ignored when excluding cell pixels
+      allow_overlap: false       # keep overlapping pixels in both ROIs (true) or discard (false)
+      circular_neuropil: false   # circular (slower) vs square neuropil masks
+      batch_size: 500            # extraction batch size
+      snr_threshold: 0.0         # ROI SNR threshold
+
+    classification:
+      use_builtin_classifier: false  # built-in classifier vs user classifier
+      classifier_path: null          # path to classifier file (null = default user classifier)
+      preclassify: 0.0               # drop ROIs below this probability before extraction (0 = off)
+
+    dcnv_preprocess:
+      baseline: maximin          # baseline method ['maximin','prctile','constant']
+      win_baseline: 60.0         # maximin window (s)
+      sig_baseline: 10.0         # gaussian filter width (frames)
+      prctile_baseline: 8.0      # percentile baseline (used only if baseline='prctile')
