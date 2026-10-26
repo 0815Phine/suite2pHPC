@@ -5,7 +5,7 @@ import subprocess
 import yaml
 
 # load parameters from the shared config file (same directory as this script)
-config_path = join(dirname(abspath(__file__)), "config.yaml")
+config_path = join(dirname(abspath(__file__)), "parameters/config.yaml")
 with open(config_path, "r") as f:
     config = yaml.safe_load(f)
 
@@ -15,6 +15,8 @@ results_path = config["results_path"]         # folder for processed results
 cluster_path = config["cluster_data_path"]    # per-recording folders on the cluster
 analyzed_log_path = config["analyzed_log_path"]  # log of already-handled experiments
 login_string = config["login_string"]
+key_path = config["key_path"]
+session_ids = config.get("session_ids", [])      # canonical session IDs (field 5)
 
 
 # --- helpers ------------------------------------------------
@@ -32,6 +34,15 @@ def append_names(path, names):
     with open(path, "a") as fh:
         for name in names:
             fh.write(name + "\n")
+
+
+def is_session_file(filename):
+    """True if a raw file name follows the session convention
+    animalID_date_time_sessionnum_sessionID, i.e. at least 5 fields
+    with a known session ID in field 5. Test files / FOV images with
+    other names are filtered out."""
+    parts = splitext(filename)[0].split("_")
+    return len(parts) >= 5 and parts[4] in session_ids
 
 
 def processed_folder_name(stem):
@@ -71,7 +82,8 @@ if todo == 0:
         "\n 0: All files in the raw data folder "
         "\n 1: Only files that have not been analyzed before "
         "\n 2: Specific files listed in a text file "
-        "\n Select 0/1/2 >>> "
+        "\n 3: Only session files (animalID_date_time_sessionnum_sessionID) "
+        "\n Select 0/1/2/3 >>> "
     ))
 
     if which == 0:
@@ -85,6 +97,14 @@ if todo == 0:
         list_path = input("\n Path to the text file listing the file names >>> ").strip().strip('"')
         wanted_stems = {splitext(x)[0] for x in read_name_list(list_path)}
         selected_files = [f for f in raw_files if splitext(f)[0] in wanted_stems]
+
+    elif which == 3:
+        selected_files = [f for f in raw_files if is_session_file(f)]
+        skipped = [f for f in raw_files if not is_session_file(f)]
+        if skipped:
+            print("\n Skipping non-session files:")
+            for f in skipped:
+                print(f)
 
     else:
         selected_files = []
@@ -103,7 +123,7 @@ if todo == 0:
             continue
         subprocess.run(["ssh", "marvin", "'mkdir'", f"'{cluster_path}/{stem}'"])
         print(f"Created directory for: {stem}")
-        subprocess.run(["scp", join(data_path, f), f"{login_string}:{cluster_path}/{stem}"])
+        subprocess.run(["scp", "-i", key_path, join(data_path, f), f"{login_string}:{cluster_path}/{stem}"])
         print(f"Copied nd2 file into {stem}")
         uploaded.append(f)
 
@@ -127,7 +147,7 @@ elif todo == 1:
         try:
             os.makedirs(dest, exist_ok=True)
             subprocess.check_output(
-                ["scp", "-r", f"{login_string}:{cluster_path}/{stem}/suite2p", dest]
+                ["scp", "-i", key_path, "-r", f"{login_string}:{cluster_path}/{stem}/suite2p", dest]
             )
             print(f"Copied suite2p data into {dest}")
         except subprocess.CalledProcessError:
