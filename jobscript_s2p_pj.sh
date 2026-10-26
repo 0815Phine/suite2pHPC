@@ -10,7 +10,7 @@
 #SBATCH --array=0-13
 
 # read paths from the shared config file
-CONFIG_FILE="config.yaml"
+CONFIG_FILE="parameters/config.yaml"
 get_config() {
     grep -E "^$1:" "$CONFIG_FILE" | head -n1 | sed -E "s/^$1:[[:space:]]*//; s/[[:space:]]*#.*//; s/[[:space:]]*$//"
 }

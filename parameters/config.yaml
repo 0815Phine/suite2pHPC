@@ -12,7 +12,7 @@
 # Each folder is named after the raw file (animalID_date_time_xxx) and holds
 # the raw file plus its suite2p output.
 # Used by jobscript_s2p_pj.sh (find) and dataexchange.py (cluster_path).
-cluster_data_path: /lustre/scratch/data/jtim_hpc-2PAnalysis
+cluster_data_path: /lustre/scratch/data/jtim_hpc-2Panalysis
 
 # Conda environment to activate on the cluster.
 # Used by jobscript_s2p_pj.sh.
@@ -21,22 +21,31 @@ conda_env_path: /home/jtim_hpc/.conda/envs/suite2p
 # Local folder that contains ALL raw imaging files in one place.
 # Files are named animalID_date_time_xxx.nd2 (xxx = any extra info, e.g.
 # sessionnumber_sessionID). Used by dataexchange.py (data_path).
-local_data_path: R:/JosephineTimm
+local_data_path: Z:/josephine_timm/treadwall
 
 # Local folder where processed results are stored. One subfolder per analyzed
 # file, named animalID_xxx, containing the suite2p output (no raw file).
 # Used by dataexchange.py (results_path).
-results_path: //ieekf-fs1/home/timmjo/Animals/
+results_path: Y:/ag_beck/josephine_timm/suite2p/results/treadwall
 
 # Plain-text log of experiments that have already been uploaded/analyzed
 # (one raw file name per line). Used by the "only not-yet-analyzed" upload
 # option and appended to automatically as new files are uploaded.
 # Used by dataexchange.py (analyzed_log_path).
-analyzed_log_path: R:/JosephineTimm/analyzed_experiments.txt
+analyzed_log_path: Y:/ag_beck/josephine_timm/suite2p/analyzed_experiments.txt
 
 # SSH login string for the cluster (user@host).
 # Used by dataexchange.py (login_string).
 login_string: jtim_hpc@marvin.hpc.uni-bonn.de
+
+# key path
+key_path: C:/Users/TomBombadil/.ssh/id_ed25519_setup
+
+# Canonical session IDs (5th field of raw session file names
+# animalID_date_time_sessionnum_sessionID). Used by dataexchange.py to
+# tell real session files apart from test files / FOV images in the raw
+# data folder (upload option 3).
+session_ids: [B1, B2, H1, H2, Sc1, Sc2, P1, P2]
 
 # --- Suite2p parameters (suite2p 1.1.0 nested structure) ----
 # Every tunable parameter is listed with its default; change any value as needed.
@@ -57,6 +66,11 @@ suite2p:
     force_sktiff: false          # (tiff only) use tifffile instead of scanimage reader
     batch_size: 500              # frames/batch when WRITING binaries (tiff/h5; nd2 ignores)
     # fast_disk: null            # SSD dir for temporary binary (defaults to save_path0)
+
+    preprocess:
+      remove_pc1: true              # master switch for PC1 noise removal
+      pc1_mid_freq_threshold: 0.8   # remove PC1 if mid-frequency power fraction > threshold (0-1, detects periodic artifacts)
+      pca_sample_frames: 500        # frames used for PCA fitting (evenly spaced)
 
   settings:
     # ---- general ----
