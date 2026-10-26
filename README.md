@@ -76,3 +76,40 @@ To delete the files, run:
 ```rm Log*```
 
 This command will remove all files that begin with the Log.
+
+## Troubleshooting
+
+### Config file not found on the cluster
+
+If the job fails with an error about `config.yaml` not being found, the script is looking in the wrong directory. The job script must `cd` to its own directory and reference `parameters/config.yaml`:
+
+```bash
+cd "$(dirname "$0")"
+CONFIG_FILE="parameters/config.yaml"
+```
+
+### ImportError: libxcb.so.1 / libGL.so.1: cannot open shared object file
+
+These errors mean `opencv-python` (the GUI build) is installed but the cluster lacks X11/OpenGL system libraries. Suite2p runs headless, so use the headless OpenCV build instead:
+
+```bash
+conda activate suite2p
+pip uninstall opencv-python opencv-python-headless -y
+pip install opencv-python-headless
+```
+
+This is a one-time fix — the change persists in the conda environment. Do not add it to the job script.
+
+### sbatch error: Batch script contains DOS line breaks (\r\n)
+
+If you see this error when submitting the job:
+```
+sbatch: error: Batch script contains DOS line breaks (\r\n)
+sbatch: error: instead of expected UNIX line breaks (\n).
+```
+
+The job script was saved with Windows line endings. Fix it on the cluster with:
+```bash
+sed -i 's/\r$//' jobscript_s2p_pj.sh
+```
+Then resubmit with `sbatch jobscript_s2p_pj.sh`.
