@@ -20,13 +20,13 @@ Once logged into Marvin, perform the following three commands:
 You should now see the typical conda (base) appear on the left of the current terminal line.
 
 ### STEP 2: Upload the jobscript, pipeline and config file to your Marvin home directory.
-The next step is to copy the files config.yaml, jobscript_s2p_pj.sh and suite2p_pipeline.py to the Marvin home directory
-1) Dowload the files from this repository.
-2) Open a new terminal and copy the files from your computer to your Marvin home directory via:
+The next step is to copy the jobscript, the cluster entry point, and the two folders they read from (`src/` containing `s2p_nd2.py` and `parameters/` containing `config.yaml`) to the Marvin home directory.
+1) Download the files from this repository and open a terminal in the `code/` directory.
+2) Copy everything in one go — `src` and `parameters` are transferred as folders, so the structure on the cluster mirrors the repository:
 
-```scp /path/to/file [USERNAME]@marvin.hpc.uni-bonn.de:/home/[USERNAME]```
+```scp -r jobscript_s2p_pj.sh run_cluster.py src parameters [USERNAME]@marvin.hpc.uni-bonn.de:/home/[USERNAME]```
 
-Now, ssh back into Marvin, check if the files are in your home directory (```ls -all```).
+Now, ssh back into Marvin, check if the files are in your home directory (```ls -all```). You should see `jobscript_s2p_pj.sh`, `run_cluster.py`, `src/` and `parameters/` there.
 
 ### STEP 3: Install Suite2P in your Marvin home directory
 To install Suite2P locally in your home directory you can now follow the instructions given by Suite2P ()

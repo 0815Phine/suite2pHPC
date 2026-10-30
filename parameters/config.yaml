@@ -2,7 +2,7 @@
 # Configuration for the suite2p HPC pipeline
 #
 # Edit the values below to match your setup. All three scripts
-# (jobscript_s2p_pj.sh, dataexchange.py, suite2p_pipeline.py)
+# (jobscript_s2p_pj.sh, dataexchange.py, run_cluster.py)
 # read their parameters from this single file.
 # ============================================================
 

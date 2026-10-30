@@ -28,4 +28,4 @@ conda activate "$CONDA_ENV_PATH"
 DIR=$(sed -n "$((SLURM_ARRAY_TASK_ID+1))p" dirs.txt)
 
 # run python script
-python suite2p_pipeline.py "$DIR"
+python run_cluster.py "$DIR"

@@ -7,7 +7,11 @@ suite2p conda env, e.g.:
 
 DATAPATH defaults to the local test folder when omitted.
 """
+import os
 import sys
+
+# the pipeline source module (s2p_nd2) lives in src/ next to this script
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "src"))
 
 import s2p_nd2
 
