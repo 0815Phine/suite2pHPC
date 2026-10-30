@@ -7,4 +7,4 @@ import s2p_nd2
 config = s2p_nd2.load_config()
 
 datapath = sys.argv[1]
-s2p_nd2.run_folder(datapath, config["suite2p"])
+s2p_nd2.run_folder(datapath, config["suite2p"], preprocess=config.get("preprocess"))

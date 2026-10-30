@@ -47,6 +47,13 @@ key_path: C:/Users/TomBombadil/.ssh/id_ed25519_setup
 # data folder (upload option 3).
 session_ids: [B1, B2, H1, H2, Sc1, Sc2, P1, P2]
 
+# --- Preprocessing ---
+# remove noise from scan head
+preprocess:
+  remove_ripple: true               # master switch for FFT-based ripple noise removal (first channel only)
+  ripple_amplitude_threshold: 10.8  # log-amplitude threshold for spike detection
+  ripple_win: 40                    # half-size of DC mask window (pixels)
+
 # --- Suite2p parameters (suite2p 1.1.0 nested structure) ----
 # Every tunable parameter is listed with its default; change any value as needed.
 # db  = file input/output; settings = pipeline parameters (grouped by stage).
@@ -66,11 +73,6 @@ suite2p:
     force_sktiff: false          # (tiff only) use tifffile instead of scanimage reader
     batch_size: 500              # frames/batch when WRITING binaries (tiff/h5; nd2 ignores)
     # fast_disk: null            # SSD dir for temporary binary (defaults to save_path0)
-
-    preprocess:
-      remove_pc1: true              # master switch for PC1 noise removal
-      pc1_mid_freq_threshold: 0.8   # remove PC1 if mid-frequency power fraction > threshold (0-1, detects periodic artifacts)
-      pca_sample_frames: 500        # frames used for PCA fitting (evenly spaced)
 
   settings:
     # ---- general ----

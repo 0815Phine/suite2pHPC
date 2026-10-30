@@ -22,90 +22,11 @@ import nd2
 import yaml
 from suite2p import default_db, default_settings
 
+from ripple_removal import remove_ripple_noise
+
 # NB: `import suite2p.run_s2p as s2p` would bind the *function* run_s2p, because
 # suite2p/__init__.py rebinds the `run_s2p` attribute. Import the module explicitly.
 s2p = importlib.import_module("suite2p.run_s2p")
-
-
-def _compute_mid_frequency_fraction(pc1_spatial, r_low_frac=0.03, r_high_frac=0.25):
-    """Compute fraction of power in the mid-frequency band of a 2D pattern.
-
-    Mid frequencies capture periodic artifacts (resonant scanning stripes)
-    while excluding DC and very low frequencies (smooth structures: blobs, gradients).
-
-    Parameters:
-        pc1_spatial: 2D array (Ly, Lx)
-        r_low_frac: lower radius bound as fraction of min(Ly, Lx) (default 0.03)
-        r_high_frac: upper radius bound as fraction of min(Ly, Lx) (default 0.25)
-
-    Returns:
-        Fraction of total power in the mid-frequency band (0.0 to 1.0).
-        Stripes ~1.0, blobs/gradients ~0.0-0.5, random noise ~0.2-0.8.
-    """
-    Ly, Lx = pc1_spatial.shape
-    fft = np.fft.fft2(pc1_spatial.astype(np.float64))
-    power = np.abs(fft) ** 2
-    power_shifted = np.fft.fftshift(power)
-
-    h, w = power_shifted.shape
-    cy, cx = h // 2, w // 2
-
-    yy, xx = np.meshgrid(np.arange(h) - cy, np.arange(w) - cx, indexing="ij")
-    dist = np.sqrt(xx**2 + yy**2)
-
-    r_low = r_low_frac * min(Ly, Lx)
-    r_high = r_high_frac * min(Ly, Lx)
-
-    total_power = power_shifted.sum()
-    if total_power == 0:
-        return 0.0
-
-    mid_mask = (dist >= r_low) & (dist < r_high)
-    mid_power = power_shifted[mid_mask].sum()
-
-    return mid_power / total_power
-
-
-def _remove_pc1_noise(im_func, n_sample=500, mid_freq_threshold=0.8):
-    """Conditionally remove PC1 from a (T, Y, X) movie.
-
-    Returns (denoised_movie, pc1_removed, mid_freq_fraction, variance_explained).
-    PC1 is removed if its spatial component has high mid-frequency power fraction,
-    indicating a periodic artifact (resonant scanning stripes).
-    On any error, returns the original movie unchanged.
-    """
-    T, Ly, Lx = im_func.shape
-    try:
-        from sklearn.decomposition import PCA
-        idx = np.linspace(0, T - 1, min(n_sample, T)).astype(int)
-        sample = im_func[idx].reshape(len(idx), -1).astype(np.float64)
-
-        sample_centered = sample - sample.mean(axis=0)
-        pca = PCA(n_components=1, svd_solver="randomized", random_state=0)
-        pca.fit(sample_centered)
-
-        var_explained = pca.explained_variance_ratio_[0]
-        pc1_spatial = pca.components_[0].reshape(Ly, Lx)
-
-        mid_frac = _compute_mid_frequency_fraction(pc1_spatial)
-
-        if mid_frac <= mid_freq_threshold:
-            return im_func, False, mid_frac, var_explained
-
-        # Remove PC1 from ALL frames
-        pc1 = pca.components_[0]
-        mean = sample.mean(axis=0)
-        full = im_func.reshape(T, -1).astype(np.float64)
-        full_centered = full - mean
-        full_denoised = full_centered - np.outer(full_centered @ pc1, pc1)
-        full_denoised += mean
-
-        denoised = np.clip(full_denoised, -32768, 32767).astype(np.int16).reshape(T, Ly, Lx)
-        return denoised, True, mid_frac, var_explained
-    except Exception as e:
-        print(f"  preprocess warning: PC1 removal failed ({e}), keeping original data",
-              flush=True)
-        return im_func, False, 0.0, 0.0
 
 
 def load_config(start_dir=None):
@@ -158,18 +79,12 @@ def nd2_to_binary(dbs, settings, reg_file, reg_file_chan2):
             imk = np.ascontiguousarray(im[:, j, nfunc, :, :])
 
             preproc = dbs[j].get("preprocess") or {}
-            if preproc.get("remove_pc1", False):
-                imk, removed, mid_frac, var_expl = _remove_pc1_noise(
-                    imk,
-                    n_sample=preproc.get("pca_sample_frames", 500),
-                    mid_freq_threshold=preproc.get("pc1_mid_freq_threshold", 0.8),
-                )
-                threshold = preproc.get("pc1_mid_freq_threshold", 0.8)
-                if removed:
-                    status = f"PC1 removed (mid-freq {mid_frac:.2f} > {threshold})"
-                else:
-                    status = f"PC1 kept (mid-freq {mid_frac:.2f}, below {threshold})"
-                print(f"  preprocess plane {j}: {status} (variance: {var_expl:.1%})", flush=True)
+            if preproc.get("remove_ripple", False):
+                thr = preproc["ripple_amplitude_threshold"]
+                win = preproc["ripple_win"]
+                imk = remove_ripple_noise(imk, amplitude_threshold=thr, win=win)
+                print(f"  preprocess plane {j}: ripple noise removed (threshold={thr}, win={win})",
+                      flush=True)
 
             reg_file[j].write(bytearray(imk))
             dbs[j]["meanImg"] += imk.sum(axis=0).astype("float64")
@@ -208,19 +123,23 @@ def _deep_merge(base, override):
     return base
 
 
-def run(datapath, s2p_config, save_path0=None, file_list=None):
+def run(datapath, s2p_config, save_path0=None, file_list=None, preprocess=None):
     """Patch nd2, merge the config's db/settings over suite2p defaults, and run suite2p.
 
     ``s2p_config`` is the ``suite2p:`` section of config.yaml, with ``db`` and ``settings``
-    sub-dicts matching the suite2p 1.1.0 structure. By default every file found in
-    ``datapath`` is combined into one analysis; pass ``file_list=["name.nd2"]`` to restrict
-    to a single file and ``save_path0`` to place its output. Use ``run_folder`` for the
-    usual "one session per file" behaviour.
+    sub-dicts matching the suite2p 1.1.0 structure. ``preprocess`` is the top-level
+    ``preprocess:`` section of config.yaml (ripple removal parameters), injected into
+    ``db["preprocess"]`` so the nd2 reader can access it. By default every file found
+    in ``datapath`` is combined into one analysis; pass ``file_list=["name.nd2"]`` to
+    restrict to a single file and ``save_path0`` to place its output. Use ``run_folder``
+    for the usual "one session per file" behaviour.
     """
     s2p.files_to_binary["nd2"] = nd2_to_binary  # install the migrated nd2 reader
 
     db = _deep_merge(default_db(), s2p_config.get("db"))
     settings = _deep_merge(default_settings(), s2p_config.get("settings"))
+    if preprocess:
+        db["preprocess"] = preprocess
 
     db["data_path"] = [datapath]
     db["save_path0"] = save_path0 or datapath
@@ -229,8 +148,11 @@ def run(datapath, s2p_config, save_path0=None, file_list=None):
     return s2p.run_s2p(db=db, settings=settings)
 
 
-def run_folder(datapath, s2p_config):
+def run_folder(datapath, s2p_config, preprocess=None):
     """Analyse every input file in ``datapath`` as a SEPARATE session (never combined).
+
+    ``preprocess`` is the top-level ``preprocess:`` section of config.yaml, passed
+    through to ``run`` and injected into ``db["preprocess"]``.
 
     Works for both layouts:
     - one file per folder (cluster; folders run as parallel SLURM tasks) -> output in
@@ -253,5 +175,6 @@ def run_folder(datapath, s2p_config):
         stem = os.path.splitext(name)[0]
         save_path0 = datapath if len(files) == 1 else os.path.join(datapath, stem)
         print(f"\n=== session {name} -> {os.path.join(save_path0, 'suite2p')} ===", flush=True)
-        results.append(run(datapath, s2p_config, save_path0=save_path0, file_list=[name]))
+        results.append(run(datapath, s2p_config, save_path0=save_path0, file_list=[name],
+                           preprocess=preprocess))
     return results

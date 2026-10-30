@@ -14,4 +14,4 @@ import s2p_nd2
 config = s2p_nd2.load_config()
 
 datapath = sys.argv[1] if len(sys.argv) > 1 else r"C:/Users/TomBombadil/Desktop/test"
-s2p_nd2.run_folder(datapath, config["suite2p"])
+s2p_nd2.run_folder(datapath, config["suite2p"], preprocess=config.get("preprocess"))
