@@ -49,7 +49,7 @@ def processed_folder_name(stem):
     """Map a raw file stem (animalID_date_time_xxx) to its results folder
     name (animalID_xxx), i.e. drop the date and time fields."""
     parts = stem.split("_")
-    return "_".join([parts[0]] + parts[3:])
+    return "_".join([parts[0]] + parts[4:])
 
 
 # --- gather local + cluster state ---------------------------
@@ -140,7 +140,7 @@ if todo == 0:
 elif todo == 1:
     print("\n Downloading now...")
     for stem in cluster_folders:
-        dest = join(results_path, processed_folder_name(stem))
+        dest = join(results_path, processed_folder_name(stem) + '_suite2p')
         if exists(join(dest, "suite2p")):
             print(f"Suite2p data already exists for: {stem}")
             continue
