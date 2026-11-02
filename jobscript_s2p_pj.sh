@@ -2,10 +2,9 @@
 #SBATCH --job-name=Suite2P_Analysis_JT
 #SBATCH --output=Log_%j.out
 #SBATCH --time=0:20:00
-#SBATCH --partition=intelsr_devel
+#SBATCH --partition=intelsr_short
 #SBATCH --mem=250G
 #SBATCH --account=ag_ukb_ieecr_beck
-#SBATCH --exclusive
 #SBATCH --ntasks=1 --nodes=1
 #SBATCH --array=0-13
 
