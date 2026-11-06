@@ -123,7 +123,7 @@ suite2p:
     detection:
       algorithm: sparsery        # ['sparsery','sourcery','cellpose']
       threshold_scaling: 1       # higher -> fewer ROIs detected
-      max_overlap: 0.75          # discard ROIs overlapping more than this fraction with others
+      max_overlap: 0.5          # discard ROIs overlapping more than this fraction with others
       nbins: 5000                # max binned frames for detection (reduce if RAM-limited)
       bin_size: null             # bin size in frames; null -> auto from tau/fs
       highpass_time: 100         # temporal running-mean subtraction window (in bins)

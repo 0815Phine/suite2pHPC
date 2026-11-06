@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=Suite2P_Analysis_JT
-#SBATCH --output=Log_%j.out
-#SBATCH --time=0:20:00
+#SBATCH --output=logfiles/log_%j.out
+#SBATCH --time=0:30:00
 #SBATCH --partition=intelsr_short
 #SBATCH --mem=250G
 #SBATCH --account=ag_ukb_ieecr_beck
