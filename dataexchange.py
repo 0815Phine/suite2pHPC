@@ -80,15 +80,20 @@ todo = int(input(
 if todo == 0:
     which = int(input(
         "\n Which files do you want to upload? "
-        "\n 0: All files in the raw data folder "
-        "\n 1: Only files that have not been analyzed before "
-        "\n 2: Specific files listed in a text file "
-        "\n 3: Only session files (animalID_date_time_sessionnum_sessionID) "
+        "\n 0: Only session files (animalID_date_time_sessionnum_sessionID) "
+        "\n 1: Only session files that have not been analyzed before "
+        "\n 2: All files in the raw data folder (including non-session files) "
+        "\n 3: Specific files listed in a text file "
         "\n Select 0/1/2/3 >>> "
     ))
 
     if which == 0:
-        selected_files = raw_files
+        selected_files = [f for f in raw_files if is_session_file(f)]
+        skipped = [f for f in raw_files if not is_session_file(f)]
+        if skipped:
+            print("\n Skipping non-session files:")
+            for f in skipped:
+                print(f)
 
     elif which == 1:
         analyzed_stems = {splitext(x)[0] for x in read_name_list(analyzed_log_path)}
@@ -102,17 +107,12 @@ if todo == 0:
                 print(f)
 
     elif which == 2:
+        selected_files = raw_files
+
+    elif which == 3:
         list_path = input("\n Path to the text file listing the file names >>> ").strip().strip('"')
         wanted_stems = {splitext(x)[0] for x in read_name_list(list_path)}
         selected_files = [f for f in raw_files if splitext(f)[0] in wanted_stems]
-
-    elif which == 3:
-        selected_files = [f for f in raw_files if is_session_file(f)]
-        skipped = [f for f in raw_files if not is_session_file(f)]
-        if skipped:
-            print("\n Skipping non-session files:")
-            for f in skipped:
-                print(f)
 
     else:
         selected_files = []

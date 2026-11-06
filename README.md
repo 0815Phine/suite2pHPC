@@ -29,7 +29,7 @@ The next step is to copy the jobscript, the cluster entry point, and the two fol
 Now, ssh back into Marvin, check if the files are in your home directory (```ls -all```). You should see `jobscript_s2p_pj.sh`, `run_cluster.py`, `src/` and `parameters/` there.
 
 ### STEP 3: Install Suite2P in your Marvin home directory
-To install Suite2P locally in your home directory you can now follow the instructions given by Suite2P ()
+To install Suite2P locally in your home directory you can now follow the instructions given by Suite2P (https://suite2p.readthedocs.io/en/latest/installation.html)
 
 ```conda create --name suite2p python=3.11```
 
@@ -68,7 +68,9 @@ You can also check the status of the jobs (multiple jobs because they are runnin
 ### STEP 7: Copy the results to your local device.
 For this you can use the dataexchange.py
 
-## General Tip
+## General Tips
+
+### Clean up log files
 
 Your home directory might get a bit cluttered if you do not delete the .out files after the jobs are done. Each file that you analyze will generate one of these, so they add up quickly.
 To delete the files, run:
@@ -76,6 +78,12 @@ To delete the files, run:
 ```rm Log*```
 
 This command will remove all files that begin with the Log.
+
+### Delete only the results from the cluster
+
+To re-run the analysis for recordings that are still on the cluster, delete only their `suite2p` result folders — the raw recordings are kept. The path is your `cluster_data_path` from `parameters/config.yaml`:
+
+```rm -r /lustre/scratch/data/<YOUR_WORKSPACE>/*/suite2p```
 
 ## Troubleshooting
 

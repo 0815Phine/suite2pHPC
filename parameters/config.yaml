@@ -44,15 +44,15 @@ key_path: C:/Users/TomBombadil/.ssh/id_ed25519_setup
 # Canonical session IDs (5th field of raw session file names
 # animalID_date_time_sessionnum_sessionID). Used by dataexchange.py to
 # tell real session files apart from test files / FOV images in the raw
-# data folder (upload option 3).
+# data folder (upload options 0 and 1).
 session_ids: [B1, B2, H1, H2, Sc1, Sc2, P1, P2]
 
 # --- Preprocessing ---
 # remove noise from scan head
 preprocess:
   remove_ripple: true               # master switch for FFT-based ripple noise removal (first channel only)
-  ripple_amplitude_threshold: 10.8  # log-amplitude threshold for spike detection
-  ripple_win: 40                    # half-size of DC mask window (pixels)
+  ripple_amplitude_threshold: 8.5   # log-amplitude threshold for spike detection
+  ripple_win: 46                    # half-size of DC mask window (pixels)
 
 # --- Suite2p parameters (suite2p 1.1.0 nested structure) ----
 # Every tunable parameter is listed with its default; change any value as needed.
