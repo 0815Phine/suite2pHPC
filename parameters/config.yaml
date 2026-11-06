@@ -65,7 +65,7 @@ suite2p:
 
   db:
     input_format: nd2            # ['tif','h5','nwb','bruker','movie','dcimg','nd2']
-    nchannels: 2                 # 1- or 2-channel recording
+    nchannels: 1                 # 1- or 2-channel recording
     functional_chan: 1           # channel used for functional ROIs (1-based)
     nplanes: 1                   # planes per file
     keep_movie_raw: false        # keep non-registered binary (REQUIRED if two_step_registration)
@@ -97,15 +97,15 @@ suite2p:
       save_ops_orig: true        # save db/settings/reg_outputs/detection_outputs into ops
 
     registration:
-      nimg_init: 300             # subsampled frames used to build the reference image
+      nimg_init: 400             # subsampled frames used to build the reference image
       batch_size: 200            # frames per registration batch (lower if GPU runs out of memory)
       maxregshift: 0.1           # max rigid shift as fraction of frame max(width,height)
       align_by_chan2: false      # align using the non-functional channel
       nonrigid: true             # use nonrigid registration
       block_size: [128, 128]     # nonrigid block size (keep multiples of 2/3)
-      maxregshiftNR: 5           # max nonrigid pixel shift relative to rigid
+      maxregshiftNR: 10          # max nonrigid pixel shift relative to rigid
       snr_thresh: 1.2            # nonrigid block SNR threshold below which blocks are smoothed
-      smooth_sigma: 1.8          # XY gaussian smoothing (~1 for 2P, 3-5 for 1P)
+      smooth_sigma: 1.15         # XY gaussian smoothing (~1 for 2P, 3-5 for 1P)
       smooth_sigma_time: 0       # temporal gaussian smoothing for shift estimation
                                  # NOTE: must stay 0 — values >0 crash this suite2p build
                                  # (registration temporal_smooth returns numpy, breaks torch.argmax)
@@ -126,7 +126,7 @@ suite2p:
       max_overlap: 0.75          # discard ROIs overlapping more than this fraction with others
       nbins: 5000                # max binned frames for detection (reduce if RAM-limited)
       bin_size: null             # bin size in frames; null -> auto from tau/fs
-      highpass_time: 50          # temporal running-mean subtraction window (in bins)
+      highpass_time: 100         # temporal running-mean subtraction window (in bins)
       denoise: true              # PCA-denoise the binned movie before detection
       block_size: [64, 64]       # block size used by denoising
       soma_crop: true            # crop dendrites when computing ROI stats
@@ -136,7 +136,7 @@ suite2p:
       cellpose_chan2: false      # run cellpose on the anatomical channel and overlap with ROIs
       sparsery_settings:
         highpass_neuropil: 25    # px highpass on binned movie to subtract neuropil
-        max_ROIs: 5000           # maximum number of ROIs to detect
+        max_ROIs: 2000           # maximum number of ROIs to detect
         spatial_scale: 0         # 0=auto; 1=6px, 2=12px, 3=24px, 4=48px
         active_percentile: 0.0   # percentile of active pixels used for thresholding
 
