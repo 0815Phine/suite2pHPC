@@ -54,12 +54,12 @@ For this you can use the file dataexchange.py
 The SLURM job automatically picks only the session folders that do not have finished results yet (sessions with an existing suite2p/plane0/spks.npy are skipped, so previously analyzed sessions are never overwritten). Within the SLURM job the number #SBATCH --array has to be consistent with the number of these pending sessions. For example if you have 8 pending sessions on the cluster, #SBATCH --array has to be set to 0-7. To (re-)analyze an already analyzed session, delete its suite2p output folder and resubmit.
 You can also adapt the job-name and account if needed.
 
-To start the job, within the home directory run:
+To start the job, run the command from within the directory where the jobscript lives — i.e. the same directory that contains `parameters/` and `src/` (per STEP 2 this is your home directory). The jobscript resolves all paths (`parameters/config.yaml`, `run_cluster.py`, `dirs.txt`) relative to the current directory, so submitting it from anywhere else will fail:
 
 ```sbatch jobscript_s2p_pj.sh```
 
 You should get the message that your SLURM job was submitted.
-Once the slurm job is running, for each slurm job a log file is generated: Log_jobid.out
+Once the slurm job is running, for each slurm job a log file is generated: ```logfiles/log_<jobid>.out```
 
 You can also check the status of the jobs (multiple jobs because they are running in parallel) on the cluster by running:
 
@@ -75,9 +75,9 @@ For this you can use the dataexchange.py
 Your home directory might get a bit cluttered if you do not delete the .out files after the jobs are done. Each file that you analyze will generate one of these, so they add up quickly.
 To delete the files, run:
 
-```rm Log*```
+```rm logfiles/log_*```
 
-This command will remove all files that begin with the Log.
+This command will remove all log files from the ```logfiles/``` directory.
 
 ### Delete only the results from the cluster
 
@@ -89,11 +89,11 @@ To re-run the analysis for recordings that are still on the cluster, delete only
 
 ### Config file not found on the cluster
 
-If the job fails with an error about `config.yaml` not being found, the script is looking in the wrong directory. The job script must `cd` to its own directory and reference `parameters/config.yaml`:
+If the job fails with an error about `config.yaml` not being found, or with `dirs.txt: Permission denied`, the job was submitted from the wrong directory. The jobscript uses relative paths, so it must be started from within the directory where it lives — the same directory that contains `parameters/` and `src/` (per STEP 2, your home directory). `cd` there and resubmit:
 
 ```bash
-cd "$(dirname "$0")"
-CONFIG_FILE="parameters/config.yaml"
+cd ~
+sbatch jobscript_s2p_pj.sh
 ```
 
 ### ImportError: libxcb.so.1 / libGL.so.1: cannot open shared object file

@@ -8,10 +8,6 @@
 #SBATCH --ntasks=1 --nodes=1
 #SBATCH --array=0-13
 
-# run from the script's own directory so the relative config path, run_cluster.py
-# and dirs.txt resolve correctly no matter where sbatch was called from
-cd "$(dirname "$0")" || exit 1
-
 # read paths from the shared config file
 CONFIG_FILE="parameters/config.yaml"
 get_config() {
