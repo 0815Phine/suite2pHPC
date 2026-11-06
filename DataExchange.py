@@ -1,6 +1,7 @@
 import os
-from os import listdir
-from os.path import join, isfile, dirname, abspath, splitext, exists
+import shutil
+from os import listdir, rmdir
+from os.path import join, isfile, isdir, dirname, abspath, splitext, exists
 import subprocess
 import yaml
 
@@ -91,7 +92,14 @@ if todo == 0:
 
     elif which == 1:
         analyzed_stems = {splitext(x)[0] for x in read_name_list(analyzed_log_path)}
-        selected_files = [f for f in raw_files if splitext(f)[0] not in analyzed_stems]
+        selected_files = [f for f in raw_files
+                          if is_session_file(f) and splitext(f)[0] not in analyzed_stems]
+        skipped = [f for f in raw_files if not is_session_file(f)
+                   and splitext(f)[0] not in analyzed_stems]
+        if skipped:
+            print("\n Skipping non-session files:")
+            for f in skipped:
+                print(f)
 
     elif which == 2:
         list_path = input("\n Path to the text file listing the file names >>> ").strip().strip('"')
@@ -141,14 +149,25 @@ elif todo == 1:
     print("\n Downloading now...")
     for stem in cluster_folders:
         dest = join(results_path, processed_folder_name(stem) + '_suite2p')
-        if exists(join(dest, "suite2p")):
+        # skip only folders that actually contain data (an empty dest is the
+        # leftover of a previous failed attempt and will be retried); older
+        # downloads with the nested suite2p/plane0 layout are left untouched
+        if exists(dest) and listdir(dest):
             print(f"Suite2p data already exists for: {stem}")
             continue
         try:
             os.makedirs(dest, exist_ok=True)
+            # download the suite2p output contents directly into dest (no extra
+            # suite2p/ level), then flatten plane0/ up (single-plane runs), keeping
+            # the plane's db.npy/settings.npy (the ones actually used by the run)
             subprocess.check_output(
-                ["scp", "-i", key_path, "-r", f"{login_string}:{cluster_path}/{stem}/suite2p", dest]
+                ["scp", "-i", key_path, "-r", f"{login_string}:{cluster_path}/{stem}/suite2p/*", dest]
             )
+            plane0 = join(dest, "plane0")
+            if isdir(plane0):
+                for entry in listdir(plane0):
+                    shutil.move(join(plane0, entry), join(dest, entry))
+                rmdir(plane0)
             print(f"Copied suite2p data into {dest}")
         except subprocess.CalledProcessError:
             print(f"No suite2p results for: {stem}")

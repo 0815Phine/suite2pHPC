@@ -16,15 +16,25 @@ get_config() {
 CLUSTER_DATA_PATH=$(get_config cluster_data_path)
 CONDA_ENV_PATH=$(get_config conda_env_path)
 
-# create a path list
-find "$CLUSTER_DATA_PATH" -mindepth 1 -maxdepth 1 -type d > dirs.txt
+# create a path list — only sessions that don't have finished results yet.
+# spks.npy is the last output written by the pipeline, so a session with it is
+# considered done; re-submitting the job then only analyzes new or previously
+# failed sessions, and old results are never overwritten.
+find "$CLUSTER_DATA_PATH" -mindepth 1 -maxdepth 1 -type d | while read -r d; do
+    [ -f "$d/suite2p/plane0/spks.npy" ] || printf '%s\n' "$d"
+done > dirs.txt
+echo "Found $(wc -l < dirs.txt) session(s) without finished results"
 
 # start environment
 source ~/.bashrc
 conda activate "$CONDA_ENV_PATH"
 
-# create task IDs
+# pick this task's session
 DIR=$(sed -n "$((SLURM_ARRAY_TASK_ID+1))p" dirs.txt)
+if [ -z "$DIR" ]; then
+    echo "No session for task ID $SLURM_ARRAY_TASK_ID (dirs.txt has fewer entries)"
+    exit 0
+fi
 
 # run python script
 python run_cluster.py "$DIR"

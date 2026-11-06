@@ -51,7 +51,7 @@ Still on the cluster, outside the environment create a workspace to put the imag
 For this you can use the file dataexchange.py 
 
 ### STEP 6: Run Suite2P
-The SLURM job is set up to analyze all available files on the cluster in parallel. Therefore within the SLURM job the number #SBATCH --array has to be consistent with files on the cluster. For example if you have 8 imaging files on the cluster (all in their respective folder in the workspace), #SBATCH --array has to be set to 0-7.
+The SLURM job automatically picks only the session folders that do not have finished results yet (sessions with an existing suite2p/plane0/spks.npy are skipped, so previously analyzed sessions are never overwritten). Within the SLURM job the number #SBATCH --array has to be consistent with the number of these pending sessions. For example if you have 8 pending sessions on the cluster, #SBATCH --array has to be set to 0-7. To (re-)analyze an already analyzed session, delete its suite2p output folder and resubmit.
 You can also adapt the job-name and account if needed.
 
 To start the job, within the home directory run:
