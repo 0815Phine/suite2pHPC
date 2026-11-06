@@ -20,16 +20,16 @@ Once logged into Marvin, perform the following three commands:
 You should now see the typical conda (base) appear on the left of the current terminal line.
 
 ### STEP 2: Upload the jobscript, pipeline and config file to your Marvin home directory.
-The next step is to copy the files config.yaml, jobscript_s2p_pj.sh and suite2p_pipeline.py to the Marvin home directory
-1) Dowload the files from this repository.
-2) Open a new terminal and copy the files from your computer to your Marvin home directory via:
+The next step is to copy the jobscript, the cluster entry point, and the two folders they read from (`src/` containing `s2p_nd2.py` and `parameters/` containing `config.yaml`) to the Marvin home directory.
+1) Download the files from this repository and open a terminal in the `code/` directory.
+2) Copy everything in one go — `src` and `parameters` are transferred as folders, so the structure on the cluster mirrors the repository:
 
-```scp /path/to/file [USERNAME]@marvin.hpc.uni-bonn.de:/home/[USERNAME]```
+```scp -r jobscript_s2p_pj.sh run_cluster.py src parameters [USERNAME]@marvin.hpc.uni-bonn.de:/home/[USERNAME]```
 
-Now, ssh back into Marvin, check if the files are in your home directory (```ls -all```).
+Now, ssh back into Marvin, check if the files are in your home directory (```ls -all```). You should see `jobscript_s2p_pj.sh`, `run_cluster.py`, `src/` and `parameters/` there.
 
 ### STEP 3: Install Suite2P in your Marvin home directory
-To install Suite2P locally in your home directory you can now follow the instructions given by Suite2P ()
+To install Suite2P locally in your home directory you can now follow the instructions given by Suite2P (https://suite2p.readthedocs.io/en/latest/installation.html)
 
 ```conda create --name suite2p python=3.11```
 
@@ -51,7 +51,7 @@ Still on the cluster, outside the environment create a workspace to put the imag
 For this you can use the file dataexchange.py 
 
 ### STEP 6: Run Suite2P
-The SLURM job is set up to analyze all available files on the cluster in parallel. Therefore within the SLURM job the number #SBATCH --array has to be consistent with files on the cluster. For example if you have 8 imaging files on the cluster (all in their respective folder in the workspace), #SBATCH --array has to be set to 0-7.
+The SLURM job automatically picks only the session folders that do not have finished results yet (sessions with an existing suite2p/plane0/spks.npy are skipped, so previously analyzed sessions are never overwritten). Within the SLURM job the number #SBATCH --array has to be consistent with the number of these pending sessions. For example if you have 8 pending sessions on the cluster, #SBATCH --array has to be set to 0-7. To (re-)analyze an already analyzed session, delete its suite2p output folder and resubmit.
 You can also adapt the job-name and account if needed.
 
 To start the job, within the home directory run:
@@ -68,7 +68,9 @@ You can also check the status of the jobs (multiple jobs because they are runnin
 ### STEP 7: Copy the results to your local device.
 For this you can use the dataexchange.py
 
-## General Tip
+## General Tips
+
+### Clean up log files
 
 Your home directory might get a bit cluttered if you do not delete the .out files after the jobs are done. Each file that you analyze will generate one of these, so they add up quickly.
 To delete the files, run:
@@ -76,3 +78,46 @@ To delete the files, run:
 ```rm Log*```
 
 This command will remove all files that begin with the Log.
+
+### Delete only the results from the cluster
+
+To re-run the analysis for recordings that are still on the cluster, delete only their `suite2p` result folders — the raw recordings are kept. The path is your `cluster_data_path` from `parameters/config.yaml`:
+
+```rm -r /lustre/scratch/data/<YOUR_WORKSPACE>/*/suite2p```
+
+## Troubleshooting
+
+### Config file not found on the cluster
+
+If the job fails with an error about `config.yaml` not being found, the script is looking in the wrong directory. The job script must `cd` to its own directory and reference `parameters/config.yaml`:
+
+```bash
+cd "$(dirname "$0")"
+CONFIG_FILE="parameters/config.yaml"
+```
+
+### ImportError: libxcb.so.1 / libGL.so.1: cannot open shared object file
+
+These errors mean `opencv-python` (the GUI build) is installed but the cluster lacks X11/OpenGL system libraries. Suite2p runs headless, so use the headless OpenCV build instead:
+
+```bash
+conda activate suite2p
+pip uninstall opencv-python opencv-python-headless -y
+pip install opencv-python-headless
+```
+
+This is a one-time fix — the change persists in the conda environment. Do not add it to the job script.
+
+### sbatch error: Batch script contains DOS line breaks (\r\n)
+
+If you see this error when submitting the job:
+```
+sbatch: error: Batch script contains DOS line breaks (\r\n)
+sbatch: error: instead of expected UNIX line breaks (\n).
+```
+
+The job script was saved with Windows line endings. Fix it on the cluster with:
+```bash
+sed -i 's/\r$//' jobscript_s2p_pj.sh
+```
+Then resubmit with `sbatch jobscript_s2p_pj.sh`.
